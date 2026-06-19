@@ -19,8 +19,9 @@ load_dotenv()
 
 from flask import Flask
 
-# from shared.infrastructure.database import init_db
+from shared.infrastructure.database import init_db
 from shared.infrastructure.gateway_client import verify_linkage
+from shared.infrastructure.registry_poller import start_registry_polling
 
 app = Flask(__name__)
 
@@ -28,14 +29,15 @@ app = Flask(__name__)
 def bootstrap():
     """Run once at process start (the edge is a headless API, not request-driven).
 
-    - Verifies linkage to the backend via the edge gateway (``GET /me``).
-
-    DB initialization is modelled in code (``init_db``) but its call is left commented
-    out until Cocina360 services/tables are modelled.
+    - Initializes the local SQLite replica (creates the ``devices`` table if absent).
+    - Verifies linkage to the backend via the edge gateway (``GET /edge/me``).
+    - Starts the background poller that keeps the local device registry in sync
+      (``GET /edge/registry`` every few seconds).
     """
     try:
-        # init_db()
+        init_db()
         verify_linkage()
+        start_registry_polling()
     except Exception as e:
         print(e)
         raise

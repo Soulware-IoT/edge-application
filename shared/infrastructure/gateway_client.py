@@ -45,6 +45,22 @@ def fetch_identity() -> dict:
     return response.json()
 
 
+def fetch_registry() -> dict:
+    """Call ``GET {GATEWAY_URL}/edge/registry`` and return this org's device registry.
+
+    The response carries the organization id and its in-service IoT devices, each with
+    its apiKey (the ``device → edge`` credential) and safety thresholds. The gateway is a
+    pass-through, so we call the backend's real path (``/edge/registry``) through it.
+
+    Raises:
+        requests.RequestException: if the gateway is unreachable or rejects the key.
+    """
+    response = requests.get(
+        f"{gateway_url()}/edge/registry", headers=_auth_headers(), timeout=REQUEST_TIMEOUT_SECONDS)
+    response.raise_for_status()
+    return response.json()
+
+
 def verify_linkage() -> None:
     """Best-effort boot check: log whether this edge is linked to an organization.
 
