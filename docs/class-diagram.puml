@@ -1,0 +1,162 @@
+@startuml Smart Band Edge Service - Class Diagram
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam linetype ortho
+skinparam handwritten false
+skinparam monochrome false
+skinparam shadowing false
+
+' Define packages for bounded contexts
+package "Health Bounded Context" #DEEAFF {
+  ' Domain Layer
+  package "domain" #E2F0FF {
+    class HealthRecord {
+      id: int
+      device_id: str
+      bpm: float
+      created_at: datetime
+      +__init__(device_id, bpm, created_at, id)
+    }
+
+    class HealthRecordService {
+      +__init__()
+      +create_record(device_id, bpm, created_at): HealthRecord
+    }
+  }
+
+  ' Application Layer
+  package "application" #D5E7FF {
+    class HealthRecordApplicationService {
+      -health_record_repository: HealthRecordRepository
+      -health_record_service: HealthRecordService
+      -device_repository: DeviceRepository
+      +__init__()
+      +create_health_record(device_id, bpm, created_at, api_key): HealthRecord
+    }
+  }
+
+  ' Infrastructure Layer
+  package "infrastructure" #C9DFFF {
+    class HealthRecordModel {
+      id: AutoField
+      device_id: CharField
+      bpm: FloatField
+      created_at: DateTimeField
+    }
+
+    class HealthRecordRepository {
+      +save(health_record): HealthRecord
+    }
+  }
+
+  ' Interface Layer
+  package "interfaces" #BCCEFF {
+    class health_api {
+      +create_health_record(): tuple
+    }
+  }
+}
+
+package "IAM Bounded Context" #FFEBDE {
+  ' Domain Layer
+  package "domain" #FFF2E8 {
+    class Device {
+      device_id: str
+      api_key: str
+      created_at: datetime
+      +__init__(device_id, api_key, created_at)
+    }
+
+    class AuthService {
+      +__init__()
+      +authenticate(device): bool
+    }
+  }
+
+  ' Application Layer
+  package "application" #FFE6D5 {
+    class AuthApplicationService {
+      -device_repository: DeviceRepository
+      -auth_service: AuthService
+      +__init__()
+      +authenticate(device_id, api_key): bool
+      +get_or_create_test_device(): Device
+    }
+  }
+
+  ' Infrastructure Layer
+  package "infrastructure" #FFDAC1 {
+    class DeviceModel {
+      device_id: CharField
+      api_key: CharField
+      created_at: DateTimeField
+    }
+
+    class DeviceRepository {
+      +find_by_id_and_api_key(device_id, api_key): Device
+      +get_or_create_test_device(): Device
+    }
+  }
+
+  ' Interface Layer
+  package "interfaces" #FFCEAE {
+    class iam_api {
+      +authenticate_request(): tuple
+    }
+  }
+}
+
+package "Shared Components" #E8FFE8 {
+  package "infrastructure" #D1FFD1 {
+    class db {
+      +connect()
+      +create_tables()
+      +close()
+    }
+
+    class init_db {
+      +init_db()
+    }
+  }
+}
+
+' Main application
+class app {
+  +setup()
+  +run()
+}
+
+' Relationships
+
+' Health bounded context relationships
+HealthRecordApplicationService --> HealthRecordRepository: uses
+HealthRecordApplicationService --> HealthRecordService: uses
+HealthRecordApplicationService --> DeviceRepository: uses
+HealthRecordRepository --> HealthRecordModel: uses
+HealthRecordRepository ..> HealthRecord: creates
+HealthRecordService ..> HealthRecord: creates
+health_api --> HealthRecordApplicationService: uses
+
+' IAM bounded context relationships
+AuthApplicationService --> DeviceRepository: uses
+AuthApplicationService --> AuthService: uses
+DeviceRepository --> DeviceModel: uses
+DeviceRepository ..> Device: creates
+AuthService ..> Device: authenticates
+iam_api --> AuthApplicationService: uses
+
+' Cross-context relationships
+HealthRecordApplicationService ..> Device: validates
+health_api ..> iam_api: authenticate_request
+
+' Database relationships
+HealthRecordModel --> db: uses
+DeviceModel --> db: uses
+init_db ..> HealthRecordModel: creates tables
+init_db ..> DeviceModel: creates tables
+app ..> init_db: initializes
+app ..> health_api: registers
+app ..> iam_api: registers
+
+@enduml
