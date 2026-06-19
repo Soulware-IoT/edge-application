@@ -33,8 +33,12 @@ def bootstrap():
     DB initialization is modelled in code (``init_db``) but its call is left commented
     out until Cocina360 services/tables are modelled.
     """
-    # init_db()
-    verify_linkage()
+    try:
+        # init_db()
+        verify_linkage()
+    except Exception as e:
+        print(e)
+        raise
 
 
 # Run at import time so bootstrap happens on process start, for both

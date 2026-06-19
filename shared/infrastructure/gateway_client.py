@@ -67,3 +67,4 @@ def verify_linkage() -> None:
         print("  EDGE CONNECTION FAILED")
         print(f"  {error}")
         print("=" * 60)
+        raise
