@@ -61,6 +61,26 @@ def fetch_registry() -> dict:
     return response.json()
 
 
+def forward_readings(readings: list[dict]) -> None:
+    """POST a batch of buffered readings to ``{GATEWAY_URL}/edge/readings``.
+
+    The gateway passes the ``X-Edge-Api-Key`` header through to the backend, which resolves
+    this edge's organization and records the batch. Each entry must already be in the
+    backend's shape (``deviceCode``, ``temperatureC``, ``gasPpm``, ``severity``,
+    ``occurredAt``).
+
+    Raises:
+        requests.RequestException: if the gateway is unreachable or the backend rejects the
+            batch (non-2xx) — the caller keeps the readings buffered and retries later.
+    """
+    response = requests.post(
+        f"{gateway_url()}/edge/readings",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"readings": readings},
+        timeout=REQUEST_TIMEOUT_SECONDS)
+    response.raise_for_status()
+
+
 def verify_linkage() -> None:
     """Best-effort boot check: log whether this edge is linked to an organization.
 

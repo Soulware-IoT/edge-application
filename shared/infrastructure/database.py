@@ -42,7 +42,8 @@ def init_db() -> None:
         - Closes the connection afterwards.
     """
     from devices.infrastructure.models import Device
+    from readings.infrastructure.models import ReadingOutbox
 
     db.connect()
-    db.create_tables([Device], safe=True)
+    db.create_tables([Device, ReadingOutbox], safe=True)
     db.close()
