@@ -42,15 +42,17 @@ class DeviceRegistryApplicationService:
     @staticmethod
     def _to_entity(entry: dict) -> Device:
         thresholds = entry["thresholds"]
+        temperature = thresholds["temperature"]
+        gas = thresholds["gas"]
         return Device(
             device_id=entry["deviceId"],
             code=entry["code"],
             name=entry.get("name"),
             api_key=entry["apiKey"],
             thresholds=SafetyThresholds(
-                warn_temperature_c=thresholds["warnTemperatureC"],
-                crit_temperature_c=thresholds["critTemperatureC"],
-                warn_gas_ppm=thresholds["warnGasPpm"],
-                crit_gas_ppm=thresholds["critGasPpm"],
+                warn_temperature_c=temperature["warn"],
+                crit_temperature_c=temperature["crit"],
+                warn_gas_ppm=gas["warn"],
+                crit_gas_ppm=gas["crit"],
             ),
         )
