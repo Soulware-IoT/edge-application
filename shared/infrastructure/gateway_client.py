@@ -30,17 +30,33 @@ def _auth_headers() -> dict:
     return {API_KEY_HEADER: os.environ.get("EDGE_API_KEY", "").strip()}
 
 
-def fetch_identity() -> dict:
-    """Call ``GET {GATEWAY_URL}/edge/me`` and return this edge's identity + organization.
+def _own_ip() -> str:
+    """Return this edge app's IP address from the ``EDGE_APP_IP`` env var.
 
-    The gateway is a pass-through, so we call the backend's real path (``/edge/me``)
-    through it.
+    Raises:
+        RuntimeError: if ``EDGE_APP_IP`` is missing or blank.
+    """
+    ip = os.environ.get("EDGE_APP_IP", "").strip()
+    if not ip:
+        raise RuntimeError("Missing required environment variable: EDGE_APP_IP")
+    return ip
+
+
+def fetch_identity() -> dict:
+    """Call ``POST {GATEWAY_URL}/edge/me`` and return this edge's identity + organization.
+
+    Sends this instance's IP so the backend can route servo commands back through the
+    edge gateway to this specific edge app. The gateway is a pass-through.
 
     Raises:
         requests.RequestException: if the gateway is unreachable or rejects the key.
     """
-    response = requests.get(
-        f"{gateway_url()}/edge/me", headers=_auth_headers(), timeout=REQUEST_TIMEOUT_SECONDS)
+    response = requests.post(
+        f"{gateway_url()}/edge/me",
+        headers={**_auth_headers(), "Content-Type": "application/json"},
+        json={"ip": _own_ip()},
+        timeout=REQUEST_TIMEOUT_SECONDS,
+    )
     response.raise_for_status()
     return response.json()
 

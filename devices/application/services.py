@@ -45,7 +45,7 @@ class DeviceRegistryApplicationService:
         temperature = thresholds["temperature"]
         gas = thresholds["gas"]
         return Device(
-            device_id=entry["deviceId"],
+            device_id=entry["id"],
             code=entry["code"],
             name=entry.get("name"),
             api_key=entry["apiKey"],

@@ -24,9 +24,11 @@ from shared.infrastructure.gateway_client import verify_linkage
 from shared.infrastructure.registry_poller import start_registry_polling
 from shared.infrastructure.readings_flusher import start_readings_flushing
 from readings.interfaces.services import readings_api
+from servo.interfaces.services import servo_api
 
 app = Flask(__name__)
 app.register_blueprint(readings_api)
+app.register_blueprint(servo_api)
 
 
 def bootstrap():
