@@ -30,33 +30,17 @@ def _auth_headers() -> dict:
     return {API_KEY_HEADER: os.environ.get("EDGE_API_KEY", "").strip()}
 
 
-def _own_ip() -> str:
-    """Return this edge app's IP address from the ``EDGE_APP_IP`` env var.
-
-    Raises:
-        RuntimeError: if ``EDGE_APP_IP`` is missing or blank.
-    """
-    ip = os.environ.get("EDGE_APP_IP", "").strip()
-    if not ip:
-        raise RuntimeError("Missing required environment variable: EDGE_APP_IP")
-    return ip
-
-
 def fetch_identity() -> dict:
-    """Call ``POST {GATEWAY_URL}/edge/me`` and return this edge's identity + organization.
+    """Call ``GET {GATEWAY_URL}/edge/me`` and return this edge's identity + organization.
 
-    Sends this instance's IP so the backend can route servo commands back through the
-    edge gateway to this specific edge app. The gateway is a pass-through.
+    The gateway is a pass-through. The returned ``code`` is this edge's stable
+    identifier, used to subscribe to its own MQTT topic for servo commands.
 
     Raises:
         requests.RequestException: if the gateway is unreachable or rejects the key.
     """
-    response = requests.post(
-        f"{gateway_url()}/edge/me",
-        headers={**_auth_headers(), "Content-Type": "application/json"},
-        json={"ip": _own_ip()},
-        timeout=REQUEST_TIMEOUT_SECONDS,
-    )
+    response = requests.get(
+        f"{gateway_url()}/edge/me", headers=_auth_headers(), timeout=REQUEST_TIMEOUT_SECONDS)
     response.raise_for_status()
     return response.json()
 
@@ -97,23 +81,30 @@ def forward_readings(readings: list[dict]) -> None:
     response.raise_for_status()
 
 
-def verify_linkage() -> None:
-    """Best-effort boot check: log whether this edge is linked to an organization.
+def verify_linkage() -> dict:
+    """Boot check: log whether this edge is linked to an organization and return its identity.
 
-    Failures are logged but do not stop the app — the edge can still serve cached
-    devices locally while the backend/gateway is unavailable.
+    The returned identity (with its ``code``) is needed to subscribe to this edge's own
+    MQTT topic for servo commands.
+
+    Raises:
+        requests.RequestException: if the gateway is unreachable or rejects the key —
+            the caller decides whether that should be fatal.
     """
     try:
         identity = fetch_identity()
         org_id = identity.get("organizationId")
-        edge_id = identity.get("edgeDeviceId")
+        edge_id = identity.get("id")
+        code = identity.get("code")
         name = identity.get("name")
         print("=" * 60)
         print("  EDGE CONNECTED")
         print(f"  Name         : {name}")
         print(f"  Edge ID      : {edge_id}")
+        print(f"  Code         : {code}")
         print(f"  Organization : {org_id}")
         print("=" * 60)
+        return identity
     except requests.RequestException as error:
         print("=" * 60)
         print("  EDGE CONNECTION FAILED")
