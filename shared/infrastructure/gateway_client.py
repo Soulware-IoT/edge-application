@@ -33,8 +33,8 @@ def _auth_headers() -> dict:
 def fetch_identity() -> dict:
     """Call ``GET {GATEWAY_URL}/edge/me`` and return this edge's identity + organization.
 
-    The gateway is a pass-through, so we call the backend's real path (``/edge/me``)
-    through it.
+    The gateway is a pass-through. The returned ``code`` is this edge's stable
+    identifier, used to subscribe to its own MQTT topic for servo commands.
 
     Raises:
         requests.RequestException: if the gateway is unreachable or rejects the key.
@@ -81,23 +81,30 @@ def forward_readings(readings: list[dict]) -> None:
     response.raise_for_status()
 
 
-def verify_linkage() -> None:
-    """Best-effort boot check: log whether this edge is linked to an organization.
+def verify_linkage() -> dict:
+    """Boot check: log whether this edge is linked to an organization and return its identity.
 
-    Failures are logged but do not stop the app — the edge can still serve cached
-    devices locally while the backend/gateway is unavailable.
+    The returned identity (with its ``code``) is needed to subscribe to this edge's own
+    MQTT topic for servo commands.
+
+    Raises:
+        requests.RequestException: if the gateway is unreachable or rejects the key —
+            the caller decides whether that should be fatal.
     """
     try:
         identity = fetch_identity()
         org_id = identity.get("organizationId")
-        edge_id = identity.get("edgeDeviceId")
+        edge_id = identity.get("id")
+        code = identity.get("code")
         name = identity.get("name")
         print("=" * 60)
         print("  EDGE CONNECTED")
         print(f"  Name         : {name}")
         print(f"  Edge ID      : {edge_id}")
+        print(f"  Code         : {code}")
         print(f"  Organization : {org_id}")
         print("=" * 60)
+        return identity
     except requests.RequestException as error:
         print("=" * 60)
         print("  EDGE CONNECTION FAILED")
